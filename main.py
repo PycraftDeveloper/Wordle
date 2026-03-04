@@ -1,9 +1,8 @@
-import random, os, pygame
+#type: ignore
 
-pygame.init()
+import random, os, pmma
 
 base_folder = os.path.dirname(__file__)
-os.environ['SDL_VIDEO_CENTERED'] = '1'
 
 Dictionary_Location = os.path.join(base_folder, "resources\\Dictionary.txt")
 with open(Dictionary_Location, "r") as file:
@@ -13,65 +12,86 @@ word = ""
 while not len(word) == 6:
     word = Dictionary[random.randint(0, len(Dictionary)-1)]
 
-Display = pygame.display.set_mode((370, 670))
-clock = pygame.time.Clock()
+Display = pmma.Display()
+Display.create([370, 670], caption="Wordle")
+Display.window_fill_color.set_color_name(pmma.Constants.Colors.WHITE)
 
 WordleTitleFontPath = os.path.join(base_folder, "resources", "Adamina", "Adamina-Regular.ttf")
-WordleTitleFont = pygame.font.Font(WordleTitleFontPath, 60)
-WordleTitleFont.set_bold(True)
-WordleTitle = WordleTitleFont.render("Wordle", True, (0, 0, 0))
+WordleTitle = pmma.TextRenderer()
+WordleTitle.set_font(WordleTitleFontPath)
+WordleTitle.set_text("Wordle")
+WordleTitle.set_size(60)
+WordleTitle.foreground_color.set_color_name(pmma.Constants.Colors.BLACK)
+WordleTitle.position.set_coord(80, 60)
 
 GuessFontPath = os.path.join(base_folder, "resources", "Noto_Sans", "static", "NotoSans-Regular.ttf")
-GuessFont = pygame.font.Font(GuessFontPath, 45)
+
+ResultFont = pmma.TextRenderer()
+ResultFont.set_font(WordleTitleFontPath)
+ResultFont.set_size(45)
+ResultFont.foreground_color.set_color_name(pmma.Constants.Colors.BLACK)
 
 Guess = []
+LetterFont = []
 for i in range(6):
     SubGuess = []
+    SubLetters = []
     for j in range(5):
         SubGuess.append("")
+
+        Letter = pmma.TextRenderer()
+        Letter.set_font(GuessFontPath)
+        Letter.set_size(45)
+        Letter.foreground_color.set_color_name(pmma.Constants.Colors.RED)
+        SubLetters.append(Letter)
+
+    LetterFont.append(SubLetters)
     Guess.append(SubGuess)
 
 Font_X_Position = 0
 Padding = 10
 X, Y = 0, 0
 
-pygame.display.set_caption("Wordle")
-while True:
-    Display.fill([255, 255, 255])
+EnterKeyPressed = pmma.KeyEvents.Enter()
+BackspaceKeyPressed = pmma.KeyEvents.Backspace()
+TextEvent = pmma.WindowEvents.TextInput()
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            quit()
-        elif event.type == pygame.KEYDOWN:
-            try:
-                #print(pygame.key.name(event.key))
-                if event.key == pygame.K_RETURN and X == 5:
-                    pygame.display.set_caption("Wordle | Seaching dictionary")
-                    with open(Dictionary_Location, "r") as file:
-                        Dictionary = file.readlines()
+WordleSquare = pmma.Shapes2D.Rectangle()
+WordleSquare.set_size([50, 50])
 
-                    string = ""
-                    for i in range(len(Guess[Y])):
-                        string += Guess[Y][i]
+while pmma.General.is_application_running():
+    Display.clear()
 
-                    string += "\n"
+    try:
+        if EnterKeyPressed.get_pressed_toggle() and X == 5:
+            Display.set_caption("Wordle | Seaching dictionary")
+            with open(Dictionary_Location, "r") as file:
+                Dictionary = file.readlines()
 
-                    for j in range(len(Dictionary)):
-                        if string.lower() == Dictionary[j].lower():
-                            Y += 1
-                            X = 0
-                            break
+            string = ""
+            for i in range(len(Guess[Y])):
+                string += Guess[Y][i]
 
-                    pygame.display.set_caption("Wordle")
-                elif event.key == pygame.K_BACKSPACE and X > 0:
-                    X -= 1
-                    Guess[Y][X] = ""
-                elif chr(event.key).lower() >= "a" and chr(event.key).lower() <= "z" and X < 5:
-                    Guess[Y][X] = chr(event.key).upper()
-                    X += 1
-            except Exception as Message:
-                pass
+            string += "\n"
+
+            for j in range(len(Dictionary)):
+                if string.lower() == Dictionary[j].lower():
+                    Y += 1
+                    X = 0
+                    break
+
+            Display.set_caption("Wordle")
+        elif BackspaceKeyPressed.get_pressed_toggle() and X > 0:
+            X -= 1
+            Guess[Y][X] = ""
+        elif TextEvent.get_text() != "" and X < 5:
+            Guess[Y][X] = TextEvent.get_text().upper()
+            X += 1
+            TextEvent.clear_text()
+    except Exception as Message:
+        print(Message)
+        pass
+
     Ypos = 100
     for j in range(len(Guess)):
         Correct = 0
@@ -89,41 +109,59 @@ while True:
                 else:
                     col = (120, 124, 126)
                 Xpos = (400/5)*i
-                Rect = pygame.Rect(Xpos, Ypos, 50, 50)
-                pygame.draw.rect(Display, col, Rect)
-                RenderedGuess = GuessFont.render(Guess[j][i], True, (255, 255, 255))
-                x = RenderedGuess.get_width()
-                Display.blit(RenderedGuess, ((Rect.centerx-(x/2)), Ypos-7))
+
+                WordleSquare.shape_center.set_coord(Xpos + 25, Ypos)
+                WordleSquare.shape_color.set_RGB_array(col)
+                WordleSquare.set_width(0)
+                WordleSquare.render()
+
+                LetterFont[j][i].set_text(Guess[j][i])
+                LetterFont[j][i].position.set_coord(Xpos, Ypos-7)
+                LetterFont[j][i].render()
             else:
                 Xpos = (400/5)*i
-                Rect = pygame.Rect(Xpos, Ypos, 50, 50)
-                pygame.draw.rect(Display, (120, 124, 126), Rect, 2)
+
+                WordleSquare.shape_center.set_coord(Xpos + 25, Ypos)
+                WordleSquare.shape_color.set_RGB(120, 124, 126)
+                WordleSquare.set_width(2)
+                WordleSquare.render()
+
         if Correct == 5:
-            Rect = pygame.Rect(0, 285, 370, 100)
-            pygame.draw.rect(Display, (106, 170, 100), Rect)
+            OutlineRect = pmma.Shapes2D.Rectangle()
+            OutlineRect.set_size([370, 100])
+            OutlineRect.shape_center.set_coord(0, 285)
+            OutlineRect.shape_color.set_RGB(106, 170, 100)
+            OutlineRect.render()
 
-            Rect = pygame.Rect(10, 295, 350, 80)
-            pygame.draw.rect(Display, (255, 255, 255), Rect)
+            FillRect = pmma.Shapes2D.Rectangle()
+            FillRect.set_size([350, 80])
+            FillRect.shape_center.set_coord(10, 295)
+            FillRect.shape_color.set_color_name(pmma.Constants.Colors.WHITE)
+            FillRect.render()
 
-            RenderedGuess = GuessFont.render("Congratulations!", True, (0, 0, 0))
-            x = RenderedGuess.get_width()
-            Display.blit(RenderedGuess, ((Rect.centerx-(x/2)), 310))
-            pygame.display.update()
-            quit()
+            ResultFont.set_text("Congratulations!")
+            ResultFont.position.set_coord(10, 310)
+            ResultFont.render()
 
         Ypos += 55
 
     if Y > 5:
-        Rect = pygame.Rect(0, 285, 370, 100)
-        pygame.draw.rect(Display, (255, 0, 0), Rect)
+        OutlineRect = pmma.Shapes2D.Rectangle()
+        OutlineRect.set_size([370, 100])
+        OutlineRect.shape_center.set_coord(0, 285)
+        OutlineRect.shape_color.set_color_name(pmma.Constants.Colors.RED)
+        OutlineRect.render()
 
-        Rect = pygame.Rect(10, 295, 350, 80)
-        pygame.draw.rect(Display, (255, 255, 255), Rect)
+        FillRect = pmma.Shapes2D.Rectangle()
+        FillRect.set_size([350, 80])
+        FillRect.shape_center.set_coord(10, 295)
+        FillRect.shape_color.set_color_name(pmma.Constants.Colors.WHITE)
+        FillRect.render()
 
-        RenderedGuess = GuessFont.render("Nope!", True, (0, 0, 0))
-        x = RenderedGuess.get_width()
-        Display.blit(RenderedGuess, ((Rect.centerx-(x/2)), 310))
+        ResultFont.set_text("Nope!")
+        ResultFont.position.set_coord(10, 310)
+        ResultFont.render()
 
-    Display.blit(WordleTitle, ((370-WordleTitle.get_width())/2, 0))
-    pygame.display.flip()
-    clock.tick(30)
+    WordleTitle.render()
+
+    Display.refresh()
