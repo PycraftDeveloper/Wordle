@@ -52,12 +52,14 @@ for item in OrderedByMostLikely:
 
 # 2.e - Display Findings
 print("The best words to start with are:", ", ".join(HighScoreWords))
+SelectedWord = random.choice(HighScoreWords)
+print(f"Go with: {SelectedWord}")
 
 # 3 - Play the game and refine
 AbsentLetters = [] # Not in word
 PresentLetters = []
 CorrectLetters = ["", "", "", "", ""]
-TriedWords = []
+TriedWords = [SelectedWord]
 Guessed = False
 FirstRun = True
 
