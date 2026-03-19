@@ -12,6 +12,7 @@ with open(Dictionary_Location, "r") as file:
 word = ""
 while not len(word) == 6:
     word = Dictionary[random.randint(0, len(Dictionary)-1)]
+word = "arena"
 
 Display = pygame.display.set_mode((370, 670))
 clock = pygame.time.Clock()
